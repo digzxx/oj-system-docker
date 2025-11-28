@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # -------------------- 1. PostgreSQL 数据库服务 --------------------
+  db:
+    image: postgres:15-alpine
+    container_name: oj_db
+    # 自动加载项目根目录下的 .env 文件
+    env_file:
+      - .env
+    environment:
+      # 直接引用 .env 中的变量
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/ # 数据持久化
+    expose:
+      - 5432
+    restart: always
+    healthcheck:
+      # 使用 PG_ISREADY 检查数据库是否准备就绪，引用变量 $$USER 和 $$DB
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s # 数据库启动的宽限期
+
+  # -------------------- 2. Django 后端服务 --------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    container_name: oj_backend
+    # 自动加载项目根目录下的 .env 文件
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app # 映射代码目录，方便开发
+    expose:
+      - 8000 # 开放给 Nginx 访问
+    environment:
+      # Django 内部使用的数据库连接变量，值引用 .env 中的通用变量
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db # 使用 db 服务的名称
+      DB_PORT: 5432
+      # Django 密钥也应来自 .env
+      SECRET_KEY: ${DJANGO_SECRET_KEY} 
+    depends_on:
+      db:
+        condition: service_healthy # 只有当 db 标记为 'healthy' 时才启动 backend
+    # 关键命令：执行迁移，然后运行服务器
+    command: >
+      sh -c "python manage.py makemigrations 
+             && python manage.py migrate --noinput
+             && python manage.py runserver 0.0.0.0:8000"
+    restart: always
+
+  # -------------------- 3. React 前端服务 --------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: oj_frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # 忽略容器内的 node_modules，防止冲突
+    expose:
+      - 5173 # 开放给 Nginx 访问
+    command: npm run dev
+    restart: unless-stopped
+
+  # -------------------- 4. Nginx 反向代理服务 --------------------
+  nginx:
+    image: nginx:stable-alpine
+    container_name: oj_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80" # 唯一对外暴露的端口
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro # 映射 Nginx 配置
+      # 如果需要，可以映射前端构建产物
+      # - ./frontend/dist:/usr/share/nginx/html:ro 
+    depends_on:
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
+
+volumes:
+  postgres_data: # 定义一个持久化卷用于存储数据库数据
