@@ -1,0 +1,12 @@
+# 核心框架
+Django==4.2.14 
+
+# 数据库驱动 (必须)
+psycopg2-binary==2.9.9
+
+# API 框架 (OJ系统核心功能)
+djangorestframework==3.14.0
+
+# 健壮的配置管理 (处理环境变量和类型转换)
+python-decouple==3.8
+dj-database-url==1.3.0
