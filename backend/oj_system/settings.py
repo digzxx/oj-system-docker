@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import dj_database_url
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +22,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-kx=#qthe#1ex^xu3wq#3txce&tun)go4*30%tbo)^ok(m&*52t'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-CHANGE_ME_TO_A_SECURE_VALUE')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']  # Update this in production 
 
 
 # Application definition
@@ -73,11 +75,19 @@ WSGI_APPLICATION = 'oj_system.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+DATABASES_URL = "postgresql://{user}:{password}@{host}:{port}/{db_name}".format(
+    user=config('DB_USER'),
+    password=config('DB_PASSWORD'),
+    host=config('DB_HOST'),
+    port=config('DB_PORT'),
+    db_name=config('DB_NAME'),
+)
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(
+        DATABASES_URL,
+        conn_max_age=600,
+    )
 }
 
 
