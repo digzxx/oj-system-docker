@@ -48,14 +48,12 @@ services:
       DB_PORT: 5432
       # Django 密钥也应来自 .env
       SECRET_KEY: ${DJANGO_SECRET_KEY} 
+      DEBUG: True
     depends_on:
       db:
         condition: service_healthy # 只有当 db 标记为 'healthy' 时才启动 backend
     # 关键命令：执行迁移，然后运行服务器
-    command: >
-      sh -c "python manage.py makemigrations 
-             && python manage.py migrate --noinput
-             && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py makemigrations && python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
     restart: always
 
   # -------------------- 3. React 前端服务 --------------------
@@ -69,7 +67,7 @@ services:
       - /app/node_modules # 忽略容器内的 node_modules，防止冲突
     expose:
       - 5173 # 开放给 Nginx 访问
-    command: npm run dev
+    command: npm run dev -- --host 0.0.0.0
     restart: unless-stopped
 
   # -------------------- 4. Nginx 反向代理服务 --------------------

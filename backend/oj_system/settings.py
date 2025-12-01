@@ -75,7 +75,7 @@ WSGI_APPLICATION = 'oj_system.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES_URL = "postgresql://{user}:{password}@{host}:{port}/{db_name}".format(
+DATABASES_URL = "postgres://{user}:{password}@{host}:{port}/{db_name}".format(
     user=config('DB_USER'),
     password=config('DB_PASSWORD'),
     host=config('DB_HOST'),
