@@ -27,6 +27,7 @@ urlpatterns = [
     # 🎯 Include API namespace for the problem app
     path('api/', include('problem.urls')),
     path('api/', include('account.urls')),
+    path('api/', include('submission.urls')),
 
     # 🎯 New Authentication Endpoints
     # 1. Login (Obtain Access and Refresh Tokens)
