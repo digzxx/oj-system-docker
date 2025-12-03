@@ -64,7 +64,6 @@ services:
     container_name: oj_frontend
     volumes:
       - ./frontend:/app
-      - /app/node_modules # 忽略容器内的 node_modules，防止冲突
     expose:
       - 5173 # 开放给 Nginx 访问
     command: npm run dev -- --host 0.0.0.0
