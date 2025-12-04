@@ -1,10 +1,7 @@
-// src/components/SubmissionForm.jsx
+// src/components/SubmissionForm.tsx
 import React, { useState } from 'react';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosInstance';
 
-// 🚨 注意：为了测试，我们暂时将 Token 硬编码在这里
-// 成功后再引入登录状态管理
-const HARDCODED_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0Njc4NTA2LCJpYXQiOjE3NjQ2NzQ5MDYsImp0aSI6ImJlZTRhMmU5MDM5YTQ3ZTliYmQ0MWRiMTkxMGY4ZDA3IiwidXNlcl9pZCI6IjEifQ.lWoPMZacW4hJ5tASue8w2vNTQFVFLMcvkOD_8gcD65s"; 
 
 function SubmissionForm() {
     // 状态管理
@@ -12,40 +9,47 @@ function SubmissionForm() {
     const [language, setLanguage] = useState('python');
     const [problemId, setProblemId] = useState(1);
     const [message, setMessage] = useState('');
+    const [isLoading,setIsLoading]=useState(false);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage('正在提交...');
+        setIsLoading(true);
+
+        const accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) {
+            setMessage('❌ 提交失败: 未找到 Access Token，请先登录。');
+            setIsLoading(false);
+            return;
+        }
 
         try {
             // 🎯 API 提交的触发点
-            const response = await axios.post(
-                'http://localhost/api/submissions/', 
+            const response = await axiosInstance.post(
+                '/submissions/', 
                 // 提交的数据
                 {
                     problem: problemId,
                     code: code,
                     language: language,
                 },
-                // 🎯 认证头部的触发点
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        // 显式携带 Bearer Token
-                        'Authorization': `Bearer ${HARDCODED_ACCESS_TOKEN}`
-                    }
-                }
             );
 
             // 提交成功 (HTTP 201 Created)
             setMessage(`✅ 提交成功! 记录ID: ${response.data.id}。`);
             console.log('完整响应:', response.data);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('提交失败:', error.response);
-            // 错误处理，显示来自后端的错误信息 (如 401 Unauthorized, 400 Bad Request)
-            const errorMsg = error.response?.data?.detail || error.message;
-            setMessage(`❌ 提交失败: ${errorMsg}`);
+            // 错误处理，区分 Token 失效和其他错误
+            if (error.response && error.response.status === 401) {
+                setMessage('❌ 提交失败: Token 已过期，请重新登录。');
+            } else {
+                const errorMsg = error.response?.data?.detail || error.message;
+                setMessage(`❌ 提交失败: ${errorMsg}`);
+            }
+        }finally {
+            setIsLoading(false);
         }
     };
 
